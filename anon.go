@@ -7,6 +7,8 @@ import (
 	"reflect"
 	"strings"
 	"unicode/utf8"
+
+	"github.com/mitchellh/copystructure"
 )
 
 const tagName = "anon"
@@ -25,17 +27,42 @@ const (
 // function (e.g. json.Marshal()) on the resulting struct.
 // Marshal takes a pointer to a struct.
 func Marshal(v any, m func(any) ([]byte, error)) ([]byte, error) {
-	err := Anonymise(v)
+	res, err := Anonymise(v)
 	if err != nil {
 		return nil, err
 	}
 
-	return m(v)
+	return m(res)
 }
 
-// Anonymise anonymises the struct that the given pointer points to, according
-// to the "anon" tags it has in it.
-func Anonymise(v any) (err error) {
+// Anonymise anonymises data according to the "anon" tags it has in it.
+// It returns a copy of the given value. Use AnonymiseByRef if you'd
+// prefer to pass by reference.
+func Anonymise(v any) (res any, err error) {
+	defer func() {
+		// I don't trust reflection.
+		if r := recover(); r != nil {
+			err = fmt.Errorf("anon: %v", r)
+		}
+	}()
+
+	// Deep copy, otherwise we risk changing maps/slices inside the struct.
+	cp, err := copystructure.Copy(v)
+	if err != nil {
+		return nil, err
+	}
+
+	val := reflect.ValueOf(cp)
+	tmp := reflect.New(val.Type())
+	tmp.Elem().Set(val)
+
+	err = anonymise("", tmp)
+	return tmp.Interface(), err
+}
+
+// AnonymiseByRef anonymises the struct that the given pointer points
+// to, according to the "anon" tags it has in it.
+func AnonymiseByRef(v any) (err error) {
 	defer func() error {
 		// I don't trust reflection.
 		if r := recover(); r != nil {

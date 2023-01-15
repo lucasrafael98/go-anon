@@ -29,16 +29,18 @@ There are three ways to use this library:
 		ID: "111",
 		Sensitive: "password123",
 	}
-	str, err := anon.Marshal(&thing, json.Marshal)
+	str, err := anon.Marshal(thing, json.Marshal)
 	// Result:
 	// {
 	// 	"id": "111",
 	// 	"sensitive": "****",
 	// }
    ```
- - `Anonymise`: same as above, but you're just changing the struct and not outputting marshalled data.
+ - `Anonymise`: same as above, but you're just changing the struct and not outputting marshalled data. There's
+   also `AnonymiseByRef` if you want to replace the value in-place.
  	```go 
-	str, err := anon.Anonymise(&thing)
+	anonymised, err := anon.Anonymise(thing)
+	err := anon.AnonymiseByRef(&thing)
 	// Result:
 	// Thing {
 	// 	ID: "111",
@@ -73,17 +75,17 @@ type inner struct {
 }
 
 anon.Marshal(&test{
-	ToStar:      "hello, world",
-	ToEmpty:     "erase me",
-	ToLen:       "swear",
+	ToStar:      "My god, it's full of stars!",
+	ToEmpty:     "will be erased",
+	ToLen:       "swear-word",
 	ToInfo:      "Through the fence, between the curling flower spaces, I could see them hitting.",
 	ToInfoRune:  "Para a aventura indefinida, para o Mar Absoluto, para realizar o Impossível!",
-	ToIgnore:    "keep me as-is",
+	ToIgnore:    "will not change",
 	ToSHA:       "hash me please",
-	Inner:       inner{innerString: "aa"},
-	Slice:       []string{"123", "1234", "á2"},
-	SliceIgnore: []string{"as-is"},
-	StructSlice: []inner{{innerString: "aa"}, {innerString: "bb"}},
+	Inner:       inner{innerString: "will be asterisks"},
+	Slice:       []string{"123", "1234", "á"},
+	SliceIgnore: []string{"kept as-is"},
+	StructSlice: []inner{{innerString: "12"}, {innerString: "23"}},
 }, json.Marshal)
 ```
 With the result below:
@@ -91,10 +93,10 @@ With the result below:
 {
   "to_star": "****",
   "to_empty": "",
-  "to_len": "*****",
+  "to_len": "**********",
   "to_info": "len:79,is_ascii:true",
   "to_info_rune": "len:77,is_ascii:false",
-  "to_ignore": "keep me as-is",
+  "to_ignore": "will not change",
   "to_sha": "��|�-\r\\\u00186*���%�/~�t�]\u001fP��>�0��K�\u0018�d\"5��[�2�)��\u000f\"\u0014��:8�{H�\u001c#Cc��V",
   "inner": {
     "inner_string": "****"
@@ -102,10 +104,10 @@ With the result below:
   "slice": [
     "***",
     "****",
-    "***"
+    "**"
   ],
   "slice_ignore": [
-    "as-is"
+    "kept as-is"
   ],
   "struct_slice": [
     {
